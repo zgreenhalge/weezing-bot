@@ -13,6 +13,7 @@ dependencies {
     implementation("net.dv8tion:JDA:5.0.0-beta.21")
     implementation("io.github.microutils:kotlin-logging-jvm:2.0.11")
     implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 
     // lol tests
     testImplementation("org.jetbrains.kotlin:kotlin-test")

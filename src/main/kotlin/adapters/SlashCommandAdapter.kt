@@ -22,7 +22,7 @@ class SlashCommandAdapter: ListenerAdapter() {
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         when(event.name) {
-            "skronk" -> SkronkCommand.process(event)
+            "skronk" -> SkronkCommand(event).process()
         }
     }
 
