@@ -3,6 +3,7 @@ package commands
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -21,13 +22,16 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
         private val OPTION_MSG = "message"
         private val ROLE_NAME = "SKRONK'd"
         private val TIMEOUT = 300000L
+
+        private val SKRONK_TIMES = mutableMapOf<Long, Long>()
+        private val skronkLock = Mutex() //Used to control access to SKRONK_TIMES
+
         val definition = Commands.slash("skronk", "Skronk a user")
             .setGuildOnly(true)
             .addOption(OptionType.USER, OPTION_NAME, "The user to skronk", true)
             .addOption(OptionType.STRING, OPTION_MSG, "The reason for the skronking")
     }
 
-    private val SKRONK_TIMES = mutableMapOf<Long, Long>()
     val targetUser = event.getOption(OPTION_NAME, OptionMapping::getAsUser)!!
     val guild = event.guild
     val skronkd = getRole(guild)
@@ -46,11 +50,9 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
                 return@let
             }
 
-            // Otherwise, give the skronk'd role to targetMember
-            applySkronk(skronkee, event.getOption(OPTION_MSG, OptionMapping::getAsString))
-
+            // this block executes asynchronously~!
             launch {
-                // this block executes asynchronously~!
+                applySkronk(skronkee, event.getOption(OPTION_MSG, OptionMapping::getAsString))
                 delay(TIMEOUT)
                 removeSkronk(skronkee, skronkd)
             }
@@ -59,16 +61,20 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
         }
     }
 
-    private fun applySkronk(
+    private suspend fun applySkronk(
         skronkee: Member,
         reason: String?
     ) {
+
         // Cumulative skronk calculation
-        SKRONK_TIMES[skronkee.idLong] = if(SKRONK_TIMES.contains(skronkee.idLong)) {
+        skronkLock.lock(SKRONK_TIMES)
+        val duration = if(SKRONK_TIMES.contains(skronkee.idLong)) {
              SKRONK_TIMES[skronkee.idLong]!! + TIMEOUT
         } else TIMEOUT
+        SKRONK_TIMES[skronkee.idLong] = duration
+        skronkLock.unlock(SKRONK_TIMES)
 
-        logger.info { "${skronkee.effectiveName} is up to ${SKRONK_TIMES[skronkee.idLong]}ms of skronk" }
+        logger.info { "${skronkee.effectiveName} is skronk'd for ${duration}ms" }
 
         val msgBuilder = StringBuilder("GET SKRONK'D ${skronkee.asMention}")
         if (reason != null) {
@@ -76,23 +82,28 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
             msgBuilder.append("$reason")
         }
         msgBuilder.appendLine()
-        msgBuilder.append("(See you in ${SKRONK_TIMES[skronkee.idLong]} seconds)")
+        msgBuilder.append("(See you in $duration seconds)")
 
         //Both guild and role should be resolved by now
         guild!!.addRoleToMember(skronkee, skronkd!!)
         event.reply(msgBuilder.toString()).queue()
     }
 
-    private fun removeSkronk(skronkee: Member, skronkd: Role) {
-        val guild = skronkee.guild
-        val timeLeft = (SKRONK_TIMES[skronkee.idLong] ?: 0) - TIMEOUT
+    private suspend fun removeSkronk(skronkee: Member, skronkd: Role) {
+        skronkLock.lock(SKRONK_TIMES)
+        try {
+            val guild = skronkee.guild
+            val timeLeft = (SKRONK_TIMES[skronkee.idLong] ?: 0) - TIMEOUT
 
-        if(timeLeft <= 0) {
-            SKRONK_TIMES.remove(skronkee.idLong)
-            guild.removeRoleFromMember(skronkee, skronkd)
-        } else {
-            logger.info { "${skronkee.effectiveName} has ${timeLeft}ms of skronk left" }
-            SKRONK_TIMES[skronkee.idLong] = timeLeft
+            if(timeLeft <= 0) {
+                SKRONK_TIMES.remove(skronkee.idLong)
+                guild.removeRoleFromMember(skronkee, skronkd)
+            } else {
+                logger.info { "${skronkee.effectiveName} has ${timeLeft}ms of skronk left" }
+                SKRONK_TIMES[skronkee.idLong] = timeLeft
+            }
+        } finally {
+            skronkLock.unlock(SKRONK_TIMES)
         }
     }
 
