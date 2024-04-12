@@ -1,6 +1,8 @@
 package adapters
 
-import commands.SkronkCommand
+import commands.Skronk
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -17,19 +19,17 @@ class SlashCommandAdapter: ListenerAdapter() {
     companion object {
         fun updateCommands(client: JDA): List<Command> {
             return client.updateCommands().addCommands(
-                SkronkCommand.definition
+                Skronk.definition
             ).complete()
         }
     }
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         logger.info { "Received event ${event.fullCommandName} ${event.options}" }
-        try {
+        GlobalScope.launch {
             when (event.name) {
-                "skronk" -> SkronkCommand(event).process()
+                "skronk" ->  Skronk(event).process()
             }
-        } catch(e: Exception) {
-            logger.error("Caught ${e::class.java.name}: ${e.message}", e)
         }
     }
 

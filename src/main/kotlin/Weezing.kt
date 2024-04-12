@@ -1,12 +1,15 @@
 import adapters.SlashCommandAdapter
 import listeners.StartupShutdownListener
 import mu.KotlinLogging
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.entities.Activity
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 
-private val logger = KotlinLogging.logger {}
+var jda: JDA? = null
+var botUser: User? = null
 
 /**
  * Entry point to the application.
@@ -16,6 +19,9 @@ private val logger = KotlinLogging.logger {}
 fun main(args: Array<String>) {
     if(args.isEmpty())
         throw Exception("No auth token provided for the client!")
+
+    //This will add coroutine names to the thread names while a coroutine is using the thread!
+//    System.setProperty("kotlinx.coroutines.debug", "on")
 
     // Create the API client with the token and set our activity
     val builder: JDABuilder = JDABuilder
@@ -30,6 +36,7 @@ fun main(args: Array<String>) {
         SlashCommandAdapter()
     )
 
-    val jda = builder.build()
-    SlashCommandAdapter.updateCommands(jda)
+    jda = builder.build()
+    botUser = jda!!.selfUser
+    SlashCommandAdapter.updateCommands(jda!!)
 }
