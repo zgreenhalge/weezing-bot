@@ -1,4 +1,5 @@
 plugins {
+    application
     kotlin("jvm") version "1.9.23"
 }
 
@@ -19,9 +20,14 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 
+application {
+    mainClass = "WeezingKt"
+}
+
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
     jvmToolchain(20)
 }
