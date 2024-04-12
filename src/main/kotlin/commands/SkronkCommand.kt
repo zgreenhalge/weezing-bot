@@ -16,13 +16,13 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands
 
 private val logger = KotlinLogging.logger {}
 
-class SkronkCommand(val event: SlashCommandInteractionEvent) {
+class SkronkCommand(private val event: SlashCommandInteractionEvent) {
 
     companion object {
-        private val OPTION_NAME = "name"
-        private val OPTION_MSG = "message"
-        private val ROLE_NAME = "SKRONK'd"
-        private val TIMEOUT = 300000L
+        private const val OPTION_NAME = "name"
+        private const val OPTION_MSG = "message"
+        private const val ROLE_NAME = "SKRONK'd"
+        private const val TIMEOUT = 300000L
 
         private val SKRONK_TIMES = mutableMapOf<Long, Long>()
         private val lock = Mutex() //Used to control access to SKRONK_TIMES
@@ -33,9 +33,9 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
             .addOption(OptionType.STRING, OPTION_MSG, "The reason for the skronking")
     }
 
-    val targetUser = event.getOption(OPTION_NAME, OptionMapping::getAsUser)!!
-    val guild = event.guild
-    val skronkd = getRole(guild)
+    private val targetUser = event.getOption(OPTION_NAME, OptionMapping::getAsUser)!!
+    private val guild = event.guild
+    private val skronkd = getRole(guild)
 
     /**
      * The main execution block for skronk.
@@ -50,7 +50,6 @@ class SkronkCommand(val event: SlashCommandInteractionEvent) {
 
         guild?.let { guild ->
             guild.loadMembers() //Required to cache all members of the guild
-
             val skronker = guild.getMember(event.user)!!
             val skronkee = guild.getMember(targetUser)!!
 
