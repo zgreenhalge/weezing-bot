@@ -6,6 +6,9 @@
         </encoder>
     </appender>
 
+    <logger name="commands" level="debug" />
+    <logger name="adapters" level="debug" />
+    <logger name="listeners" level="debug" />
     <root level="info">
         <appender-ref ref="STDOUT" />
     </root>

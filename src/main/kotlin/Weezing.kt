@@ -1,12 +1,12 @@
 import adapters.SlashCommandAdapter
 import listeners.StartupShutdownListener
-import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.entities.Activity
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.cache.CacheFlag
+import sun.misc.Signal
 
 var jda: JDA? = null
 var botUser: User? = null
@@ -19,6 +19,11 @@ var botUser: User? = null
 fun main(args: Array<String>) {
     if(args.isEmpty())
         throw Exception("No auth token provided for the client!")
+
+    // Register the method to handle SIGINT (ctrl+c, ctrl+x, etc)
+    Signal.handle(Signal("INT")) {
+        shutdown()
+    }
 
     //This will add coroutine names to the thread names while a coroutine is using the thread!
 //    System.setProperty("kotlinx.coroutines.debug", "on")
@@ -39,4 +44,14 @@ fun main(args: Array<String>) {
     jda = builder.build()
     botUser = jda!!.selfUser
     SlashCommandAdapter.updateCommands(jda!!)
+}
+
+/**
+ * All operations required to gracefully shutdown
+ */
+fun shutdown() {
+    jda?.let {
+        SlashCommandAdapter.clearCommands(it)
+        it.shutdown()
+    }
 }
