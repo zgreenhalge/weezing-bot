@@ -25,8 +25,8 @@ fun main(args: Array<String>) {
         shutdown()
     }
 
-    //This will add coroutine names to the thread names while a coroutine is using the thread!
-//    System.setProperty("kotlinx.coroutines.debug", "on")
+    // This will add coroutine names to the thread names while a coroutine is using the thread!
+    System.setProperty("kotlinx.coroutines.debug", "on")
 
     // Create the API client with the token and set our activity
     val builder: JDABuilder = JDABuilder

@@ -1,13 +1,13 @@
 package adapters
 
 import commands.Skronk
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
-import net.dv8tion.jda.api.interactions.commands.Command
 
 private val logger = KotlinLogging.logger {}
 
@@ -38,10 +38,15 @@ class SlashCommandAdapter: ListenerAdapter() {
     }
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        logger.info { "Received event ${event.fullCommandName} ${event.options}" }
-        GlobalScope.launch {
-            when (event.name) {
-                "skronk" ->  Skronk(event).process()
+        logger.info { "Received event ${event.commandString}" }
+        GlobalScope.launch(CoroutineName(event.commandString)) {
+            try {
+                when (event.name) {
+                    "skronk" -> Skronk(event).process()
+                }
+            } catch(e: Exception) {
+                event.reply(":x: Ran into a(n) *${e::class.simpleName}*").queue()
+                logger.error("Exception when trying to execute ${event.commandString}:", e)
             }
         }
     }
