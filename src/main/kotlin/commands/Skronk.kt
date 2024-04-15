@@ -1,6 +1,6 @@
 package commands
 
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Guild
@@ -18,33 +18,46 @@ private val logger = KotlinLogging.logger {}
 
 class Skronk(private val event: SlashCommandInteractionEvent) {
 
-    companion object {
-        private const val OPTION_NAME = "name"
-        private const val OPTION_MESSAGE = "message"
-        private const val OPTION_TIMEOUT = "timeout"
+    companion object: ISlashCommand {
+        override val commandName = "skronk"
+        private const val OPT_NAME = "name"
+        private const val OPT_MESSAGE = "message"
+        private const val OPT_TIMEOUT = "timeout"
         private const val ROLE_NAME = "SKRONK'd"
         private const val DEFAULT_TIMEOUT = 60L //In seconds
 
         private val SKRONK_TIMES = mutableMapOf<Long, Long>()
-        private val lock = Mutex() //Used to control access to SKRONK_TIMES
 
-        val definition = Commands.slash("skronk", "Skronk a user")
+        override val definition = Commands.slash(commandName, "Skronk a user")
             .setGuildOnly(true)
-            .addOption(OptionType.USER, OPTION_NAME, "The user to skronk", true)
-            .addOption(OptionType.STRING, OPTION_MESSAGE, "The reason for the skronking")
-            .addOption(OptionType.STRING, OPTION_TIMEOUT, "How long to skronk")
+            .addOption(OptionType.USER, OPT_NAME, "The user to skronk", true)
+            .addOption(OptionType.STRING, OPT_MESSAGE, "The reason for the skronking")
+            .addOption(OptionType.STRING, OPT_TIMEOUT, "How long to skronk")
+
+        /**
+         * Spins off processing of Skronk into a new, GlobalScope coroutine
+         * This allows us to sleep until the role should be removed
+         * but also means we are responsible for making sure the coroutine actually ends
+         */
+        @OptIn(DelicateCoroutinesApi::class)
+        override fun process(event: SlashCommandInteractionEvent) {
+            GlobalScope.launch(CoroutineName(event.commandString)) {
+                Skronk(event).execute()
+            }
+        }
     }
 
-    private val targetUser = event.getOption(OPTION_NAME, OptionMapping::getAsUser)!!
+    private val targetUser = event.getOption(OPT_NAME, OptionMapping::getAsUser)!!
     private val guild = event.guild
     private val skronkd = getRole(guild)
     private var timeoutDuration = -1L
+    private val lock = Mutex() //Used to control access to SKRONK_TIMES
 
     /**
      * The main execution block for skronk.
      * Checks if the skronking can happen, determines the targets, then does the skronking
      */
-    suspend fun process() {
+    private suspend fun execute() {
         logger.debug { "Processing skronk request for ${targetUser.effectiveName}" }
 
         //If there is no skronkd role, leave
@@ -64,7 +77,7 @@ class Skronk(private val event: SlashCommandInteractionEvent) {
             } else if(skronkee.effectiveName == event.jda.selfUser.effectiveName) {
                 executeSkronking(skronker, "YA TRYNA SKRONK ME?!?")
             } else {
-                executeSkronking(skronkee, event.getOption(OPTION_MESSAGE, OptionMapping::getAsString))
+                executeSkronking(skronkee, event.getOption(OPT_MESSAGE, OptionMapping::getAsString))
             }
         }
     }
@@ -94,11 +107,9 @@ class Skronk(private val event: SlashCommandInteractionEvent) {
         // Cumulative skronk calculation
         var duration: Long = getTimeout()
         safeAccess(SKRONK_TIMES) {
-            if(SKRONK_TIMES.contains(skronkee.idLong)) {
-                SKRONK_TIMES[skronkee.idLong]?.let {
-                    duration += it
-                }
-                logger.debug { "Extending duration of skronk for ${skronkee.effectiveName}" }
+            SKRONK_TIMES[skronkee.idLong]?.let {
+                duration += it
+                logger.debug { "Extending duration of skronk for ${skronkee.effectiveName} (by ${it}s)" }
             }
             SKRONK_TIMES[skronkee.idLong] = duration
         }
@@ -131,9 +142,9 @@ class Skronk(private val event: SlashCommandInteractionEvent) {
         logger.debug { "Sleeping for ${formatTime(sleep)}" }
         delay(sleep*1000)
         safeAccess(SKRONK_TIMES) {
-            duration = (SKRONK_TIMES[skronkee.idLong] ?: 0) - duration
+            duration = (SKRONK_TIMES[skronkee.idLong] ?: 0) - sleep
             if(duration > 0) {
-                logger.debug { "${skronkee.effectiveName} has ${formatTime(duration)} of skronk left" }
+                logger.debug { "${skronkee.effectiveName} has ${formatTime(duration)} of skronk left (after ${sleep}s sleep)" }
                 SKRONK_TIMES[skronkee.idLong] = duration
             } else {
                 logger.debug { "${skronkee.effectiveName} is released from skronk!" }
@@ -160,7 +171,7 @@ class Skronk(private val event: SlashCommandInteractionEvent) {
         if(timeoutDuration > 0)
             return timeoutDuration
 
-        val durationStr = event.getOption(OPTION_TIMEOUT, OptionMapping::getAsString) ?: DEFAULT_TIMEOUT.toString()
+        val durationStr = event.getOption(OPT_TIMEOUT, OptionMapping::getAsString) ?: DEFAULT_TIMEOUT.toString()
         timeoutDuration = try {
             Duration.parse(durationStr).inWholeSeconds
         } catch(iae: IllegalArgumentException) {

@@ -8,7 +8,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 import sun.misc.Signal
 
-var jda: JDA? = null
+var client: JDA? = null
 var botUser: User? = null
 
 /**
@@ -41,16 +41,16 @@ fun main(args: Array<String>) {
         SlashCommandAdapter()
     )
 
-    jda = builder.build()
-    botUser = jda!!.selfUser
-    SlashCommandAdapter.updateCommands(jda!!)
+    client = builder.build()
+    botUser = client!!.selfUser
+    SlashCommandAdapter.updateCommands(client!!)
 }
 
 /**
  * All operations required to gracefully shutdown
  */
 fun shutdown() {
-    jda?.let {
+    client?.let {
         SlashCommandAdapter.clearCommands(it)
         it.shutdown()
     }

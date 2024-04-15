@@ -1,9 +1,6 @@
 package adapters
 
-import commands.Skronk
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import commands.SlashCommand
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -18,15 +15,12 @@ class SlashCommandAdapter: ListenerAdapter() {
     // And https://kotlinlang.org/docs/java-to-kotlin-interop.html#static-fields
     companion object {
 
-        private val COMMANDS = listOf(
-            Skronk.definition
-        )
-
         fun updateCommands(client: JDA) {
-            for(command in COMMANDS) {
-                logger.debug { "Adding slash command ${command.name} (${command.description})" }
+            val commands = SlashCommand.entries.map { command ->
+                logger.debug { "Adding slash command ${command.name}" }
+                command.definition()
             }
-            client.updateCommands().addCommands(COMMANDS).complete()
+            client.updateCommands().addCommands(commands).complete()
         }
 
         fun clearCommands(client: JDA) {
@@ -38,16 +32,13 @@ class SlashCommandAdapter: ListenerAdapter() {
     }
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        logger.info { "Received event ${event.commandString}" }
-        GlobalScope.launch(CoroutineName(event.commandString)) {
-            try {
-                when (event.name) {
-                    "skronk" -> Skronk(event).process()
-                }
-            } catch(e: Exception) {
-                event.reply(":x: Ran into a(n) *${e::class.simpleName}*").queue()
-                logger.error("Exception when trying to execute ${event.commandString}:", e)
-            }
+        logger.info { "Received event [${event.commandString}]" }
+        try {
+            val command = SlashCommand.fromString(event.name)
+            command?.process(event) // Shouldn't have to worry about null here
+        } catch(e: Exception) {
+            event.reply(":x: Ran into a(n) *${e::class.simpleName}*").queue()
+            logger.error("Exception when trying to execute ${event.commandString}:", e)
         }
     }
 

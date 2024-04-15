@@ -12,8 +12,8 @@ class StartupShutdownListener: EventListener {
 
     override fun onEvent(event: GenericEvent) {
         when(event) {
-            is ReadyEvent -> logger.info { "Weezing is online!" }
-            is ShutdownEvent -> logger.info { "Weezing is going offline." }
+            is ReadyEvent -> logger.info { "Weezing is online~!" }
+            is ShutdownEvent -> logger.info { "Weezing shutdown complete." }
         }
     }
 }
