@@ -125,7 +125,14 @@ class Skronk(private val event: SlashCommandInteractionEvent) {
         msgBuilder.append("(See you in ${formatTime(duration)})")
 
         //Both guild and role should be resolved by now
-        guild!!.addRoleToMember(skronkee, skronkd!!).queue()
+        try {
+            guild!!.addRoleToMember(skronkee, skronkd!!).queue()
+        } catch(e: Exception) {
+            val msg = "Failure to apply skronk role: ${e::class.simpleName}"
+            logger.error(msg, e)
+            event.reply(msg).queue()
+            return
+        }
 
         logger.debug { "${skronkee.effectiveName} is skronk'd for ${formatTime(duration)}" }
         event.reply(msgBuilder.toString()).queue()

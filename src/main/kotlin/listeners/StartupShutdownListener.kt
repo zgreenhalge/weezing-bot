@@ -12,8 +12,8 @@ class StartupShutdownListener: EventListener {
 
     override fun onEvent(event: GenericEvent) {
         when(event) {
-            is ReadyEvent -> logger.info { "Weezing is online~!" }
-            is ShutdownEvent -> logger.info { "Weezing shutdown complete." }
+            is ReadyEvent -> logger.info { "Logged in as [${event.jda.selfUser.effectiveName}]" }
+            is ShutdownEvent -> logger.info { "Shutdown complete." }
         }
     }
 }
