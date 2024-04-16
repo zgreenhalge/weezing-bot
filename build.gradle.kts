@@ -28,6 +28,13 @@ tasks.test {
     useJUnitPlatform()
 }
 
+val localDev: String? by project
+val authToken: String? by project
+tasks.withType<JavaExec> {
+    systemProperty("DEBUG_ALL", localDev ?: "false")
+    systemProperty("authToken", authToken ?: "")
+}
+
 kotlin {
     jvmToolchain(20)
 }

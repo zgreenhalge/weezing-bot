@@ -6,9 +6,13 @@
         </encoder>
     </appender>
 
-    <logger name="commands" level="debug" />
-    <logger name="adapters" level="debug" />
-    <logger name="listeners" level="debug" />
+    <!-- Enable debug logging when local development-->
+    <if condition='property("DEBUG_ALL").equalsIgnoreCase("true")'>
+        <logger name="commands" level="debug" />
+        <logger name="adapters" level="debug" />
+        <logger name="listeners" level="debug" />
+    </if>
+
     <root level="info">
         <appender-ref ref="STDOUT" />
     </root>
